@@ -1,0 +1,34 @@
+# Deployment and submission proof
+
+## Preflight
+
+```bash
+python -m pip install -r requirements.txt
+genvm-lint check contracts/conflict_lock.py
+pytest tests/direct -v
+gltest tests/integration -v
+```
+
+## Deploy
+
+Using the current GenLayer CLI/tooling, deploy `contracts/conflict_lock.py` to StudioNet and record the resulting identifiers below.
+
+## StudioNet proof
+
+- Contract address: `TBD`
+- Deployment transaction: `TBD`
+- Explorer link: `TBD`
+- Source commit: `TBD`
+
+## Semantic proof scenario
+
+Use one account for all writes.
+
+1. Propose `Exclusively provide Dataset X to Company B until September 30.` in scope `agent.procurement`.
+2. Resolve it. With no active commitments, it should become `ACTIVE` deterministically.
+3. Propose `Provide Dataset X to Company C on September 12.` in the same scope.
+4. Resolve it with normal StudioNet validators.
+5. Verify the second proposal becomes `REJECTED` when consensus finds the exclusivity conflict, or `REVIEW_REQUIRED` if validators cannot reach a conclusive outcome.
+6. Record `get_resolution` and `get_conflict` outputs as submission evidence.
+
+Do not claim live semantic consensus proof until those writes have finalized on the target network.
