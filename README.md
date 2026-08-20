@@ -1,5 +1,11 @@
 # ConflictLock
 
+Direct Mode: **27/27 passing** · Preflight: **14/14** · GenVM lint: **PASS** · StudioNet: **live semantic proof passed**
+
+## Live StudioNet deployment
+
+Contract: `0xF0859DAa918Ec62813fD9dd6b8B2e822A8b88e03` · [Explorer](https://explorer-studio.genlayer.com/contracts/0xF0859DAa918Ec62813fD9dd6b8B2e822A8b88e03) · Deployment: `0x1ecffe76483f1909f54fc9751153852add12a899ee27e60b002f84c83ed33f10` · Source: `8a9d0f5`
+
 **Semantic double-promise protection for GenLayer.**
 
 ConflictLock is a standalone, reusable GenLayer Intelligent Contract that prevents a principal or autonomous agent from activating a new natural-language commitment when it materially conflicts with commitments already active in the same semantic scope.

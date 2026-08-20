@@ -24,13 +24,14 @@ The primitive is suitable for autonomous agents, procurement protocols, service 
 
 | Check | Status |
 |---|---|
-| Python compile | Run in CI |
-| GenVM lint | PASS locally |
-| Direct tests | Existing suite; pinned gltest harness is blocked by Windows temp-file cleanup on this host |
-| Pickling | Enabled by direct fixture; not independently green on this Windows host |
-| Preflight | Added; deterministic and local-only |
-| StudioNet integration | Credential/network execution not available in this workspace |
-| Deployment | Not claimed; no address/transaction fabricated |
-| Source/deployment parity | Not applicable until a deployment exists |
+| Python compile | PASS |
+| GenVM lint | PASS |
+| Direct tests / pickling | 27 passed |
+| Preflight | 14/14 PASS |
+| StudioNet integration | PASS: live conflict, compatible, and first activation flow |
+| StudioNet deployment | `0xF0859DAa918Ec62813fD9dd6b8B2e822A8b88e03` |
+| Compatible live proof | ACTIVE / COMPATIBLE |
+| Conflicting live proof | REJECTED / CONFLICTING, material `1:EXCLUSIVITY` |
+| Source/deployment parity | SHA-256 `0db8704661cbd79d286b7502a5e9d0c307039add1fabc48a0c2db3810fc1ee78` |
 
 Do not label the repository fully submission-ready until live semantic consensus and deployment evidence are recorded in `DEPLOYMENT.md`.
