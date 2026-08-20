@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 
 CONTRACT = "contracts/conflict_lock.py"
 ZERO = "0x0000000000000000000000000000000000000000"
@@ -139,3 +141,81 @@ def test_exact_active_duplicate_rejected(direct_vm, direct_deploy, direct_alice)
     activate_first(contract, direct_vm, direct_alice, text)
     with direct_vm.expect_revert("exact active duplicate"):
         propose(contract, direct_vm, direct_alice, text)
+
+
+@pytest.mark.parametrize(
+    ("raw", "verdict"),
+    [
+        ("not json", "INCONCLUSIVE"),
+        ({}, "INCONCLUSIVE"),
+        ({"verdict": "unknown"}, "INCONCLUSIVE"),
+        ({"verdict": "CONFLICTING", "conflicts": "bad"}, "INCONCLUSIVE"),
+        ({"verdict": "CONFLICTING", "conflicts": []}, "INCONCLUSIVE"),
+        ({"verdict": "COMPATIBLE", "conflicts": [{"commitment_id": "1", "severity": "POTENTIAL"}]}, "INCONCLUSIVE"),
+        ({"verdict": "COMPATIBLE", "conflicts": [{"commitment_id": "1", "severity": "MATERIAL"}]}, "INCONCLUSIVE"),
+        ({"verdict": "INCONCLUSIVE", "conflicts": [{"commitment_id": "1", "severity": "MATERIAL"}]}, "CONFLICTING"),
+    ],
+)
+def test_normalization_fails_closed(direct_vm, direct_deploy, raw, verdict):
+    contract = deploy(direct_deploy, direct_vm)
+    assert contract._normalize_decision(raw, ["1"])["verdict"] == verdict
+
+
+def test_normalization_drops_invented_and_duplicate_edges(direct_vm, direct_deploy):
+    contract = deploy(direct_deploy, direct_vm)
+    decision = contract._normalize_decision({"verdict": "CONFLICTING", "conflicts": [
+        {"commitment_id": "99", "category": "EXCLUSIVITY", "severity": "MATERIAL"},
+        {"commitment_id": "1", "category": "EXCLUSIVITY", "severity": "MATERIAL"},
+        {"commitment_id": "1", "category": "EXCLUSIVITY", "severity": "MATERIAL"},
+    ]}, ["1"])
+    assert decision["verdict"] == "CONFLICTING"
+    assert len(decision["conflicts"]) == 1
+
+
+def test_material_fingerprint_ignores_reason_but_not_category(direct_vm, direct_deploy):
+    contract = deploy(direct_deploy, direct_vm)
+    a = {"conflicts": [{"commitment_id": "1", "category": "EXCLUSIVITY", "severity": "MATERIAL", "reason": "A"}]}
+    b = {"conflicts": [{"commitment_id": "1", "category": "EXCLUSIVITY", "severity": "MATERIAL", "reason": "B"}]}
+    c = {"conflicts": [{"commitment_id": "1", "category": "TIME_COLLISION", "severity": "MATERIAL", "reason": "B"}]}
+    assert contract._material_fingerprint(a) == contract._material_fingerprint(b)
+    assert contract._material_fingerprint(a) != contract._material_fingerprint(c)
+
+
+@pytest.mark.parametrize("scope", ["", "bad scope", "UPPER CASE", "x" * 97])
+def test_invalid_scope_rejected(direct_vm, direct_deploy, direct_alice, scope):
+    contract = deploy(direct_deploy, direct_vm)
+    with direct_vm.expect_revert("scope"):
+        propose(contract, direct_vm, direct_alice, "Valid commitment.", scope=scope)
+
+
+def test_scope_normalization_and_isolation(direct_vm, direct_deploy, direct_alice):
+    contract = deploy(direct_deploy, direct_vm)
+    cid = propose(contract, direct_vm, direct_alice, "One", scope="Agent.Procurement")
+    assert rec(contract, cid)["scope"] == "agent.procurement"
+    other = propose(contract, direct_vm, direct_alice, "One", scope="agent.other")
+    assert other != cid
+
+
+def test_cancelled_proposal_cannot_resolve(direct_vm, direct_deploy, direct_alice):
+    contract = deploy(direct_deploy, direct_vm)
+    cid = propose(contract, direct_vm, direct_alice, "One")
+    contract.cancel_proposal(cid)
+    with direct_vm.expect_revert("not resolvable"):
+        contract.resolve_proposal(cid)
+
+
+def test_stale_snapshot_after_deactivation(direct_vm, direct_deploy, direct_alice):
+    contract = deploy(direct_deploy, direct_vm)
+    active = activate_first(contract, direct_vm, direct_alice)
+    pending = propose(contract, direct_vm, direct_alice, "Later commitment")
+    contract.deactivate_commitment(active, "Done")
+    with direct_vm.expect_revert("stale scope snapshot"):
+        contract.resolve_proposal(pending)
+
+
+def test_zero_callback_rejected_after_resolution(direct_vm, direct_deploy, direct_alice):
+    contract = deploy(direct_deploy, direct_vm)
+    cid = propose(contract, direct_vm, direct_alice, "One")
+    contract.resolve_proposal(cid)
+    with direct_vm.expect_revert("no callback"):
+        contract.send_callback(cid)

@@ -76,7 +76,7 @@ class ConflictLock(gl.Contract):
         context: str,
         callback: Address,
     ) -> u256:
-        principal = Address(gl.message.sender_address)
+        principal = self._as_address(gl.message.sender_address)
         clean_scope = self._normalize_scope(scope)
         clean_text = self._compact_required(commitment_text, MAX_COMMITMENT_LEN, "commitment")
         clean_context = self._compact(context, MAX_CONTEXT_LEN)
@@ -101,7 +101,7 @@ class ConflictLock(gl.Contract):
             "snapshot_revision": revision,
             "snapshot_ids": active_ids,
             "conflict_count": 0,
-            "callback": str(Address(callback)),
+            "callback": str(self._as_address(callback)),
             "callback_sent": False,
         }
         self._write_commitment(commitment_id, rec)
@@ -266,7 +266,7 @@ class ConflictLock(gl.Contract):
     @gl.public.view
     def scope_state(self, principal: Address, scope: str) -> str:
         clean_scope = self._normalize_scope(scope)
-        principal_addr = Address(principal)
+        principal_addr = self._as_address(principal)
         return json.dumps({"principal": str(principal_addr), "scope": clean_scope, "revision": self._scope_revision(principal_addr, clean_scope), "active_ids": self._scope_ids(principal_addr, clean_scope)})
 
     @gl.public.view
@@ -467,8 +467,13 @@ class ConflictLock(gl.Contract):
         self.ledger[self._scope_revision_key(principal, scope)] = str(revision)
 
     def _require_principal(self, rec: dict) -> None:
-        if Address(gl.message.sender_address) != Address(rec["principal"]):
+        if self._as_address(gl.message.sender_address) != self._as_address(rec["principal"]):
             raise gl.vm.UserError("EXPECTED: only principal")
+
+    def _as_address(self, value) -> Address:
+        if isinstance(value, Address):
+            return value
+        return Address(value)
 
     def _normalize_scope(self, scope: str) -> str:
         clean = scope.strip().lower()
