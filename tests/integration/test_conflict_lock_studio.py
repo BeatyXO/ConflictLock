@@ -1,4 +1,5 @@
 import os
+import json
 
 import pytest
 
@@ -13,6 +14,7 @@ def _write(contract, name, args):
     from gltest.assertions import tx_execution_succeeded
     receipt = getattr(contract, name)(args=args).transact(wait_retries=100)
     assert tx_execution_succeeded(receipt)
+    print("CONFLICTLOCK_TX " + name + "=" + str(receipt.get("hash", receipt.get("tx_id", ""))))
     return receipt
 
 
@@ -20,8 +22,15 @@ def test_live_semantic_admission_flow():
     from gltest import get_contract_factory
     from gltest.assertions import tx_execution_succeeded
 
+    from gltest.utils import extract_contract_address
+
     factory = get_contract_factory("ConflictLock")
-    contract = factory.deploy()
+    deployment = factory.deploy_contract_tx(wait_retries=100)
+    assert tx_execution_succeeded(deployment)
+    address = extract_contract_address(deployment)
+    print("CONFLICTLOCK_DEPLOYMENT_TX=" + str(deployment.get("hash", deployment.get("tx_id", ""))))
+    print("CONFLICTLOCK_ADDRESS=" + str(address))
+    contract = factory.build_contract(address)
     zero = "0x0000000000000000000000000000000000000000"
     first = _write(contract, "propose_commitment", ["agent.procurement", "Exclusively provide Dataset X to Company B until September 30.", "", zero])
     first_resolve = _write(contract, "resolve_proposal", [1])
